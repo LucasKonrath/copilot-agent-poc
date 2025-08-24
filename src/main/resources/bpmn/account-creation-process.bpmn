@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI" 
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn" 
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                  id="Definitions_1" 
+                  targetNamespace="http://bpmn.io/schema/bpmn" 
+                  exporter="Camunda Modeler" 
+                  exporterVersion="4.12.0">
+  
+  <bpmn:process id="account-creation-process" name="Account Creation Process" isExecutable="true">
+    
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_1" name="Account Request Received">
+      <bpmn:outgoing>SequenceFlow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- Validate Request Task -->
+    <bpmn:serviceTask id="validate-request" name="Validate Request" 
+                      camunda:delegateExpression="${validateRequestDelegate}">
+      <bpmn:incoming>SequenceFlow_1</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Apply Rules Decision Task -->
+    <bpmn:serviceTask id="apply-rules" name="Apply Business Rules" 
+                      camunda:delegateExpression="${applyRulesDelegate}">
+      <bpmn:incoming>SequenceFlow_2</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Exclusive Gateway for Decision -->
+    <bpmn:exclusiveGateway id="Gateway_Decision" name="Decision Result">
+      <bpmn:incoming>SequenceFlow_3</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_AutoApprove</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_AutoReject</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_ManualReview</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- Auto Approve Task -->
+    <bpmn:serviceTask id="auto-approve" name="Auto Approve Account" 
+                      camunda:delegateExpression="${autoApproveDelegate}">
+      <bpmn:incoming>SequenceFlow_AutoApprove</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Auto Reject Task -->
+    <bpmn:serviceTask id="auto-reject" name="Auto Reject Account" 
+                      camunda:delegateExpression="${autoRejectDelegate}">
+      <bpmn:incoming>SequenceFlow_AutoReject</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Set Manual Review Status Task -->
+    <bpmn:serviceTask id="set-manual-review" name="Set Manual Review Status" 
+                      camunda:delegateExpression="${setManualReviewDelegate}">
+      <bpmn:incoming>SequenceFlow_ManualReview</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_ManualReviewSet</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Manual Review User Task -->
+    <bpmn:userTask id="manual-review" name="Manual Review Required" 
+                   camunda:formKey="embedded:app:forms/manual-review-form.html" 
+                   camunda:candidateGroups="reviewers">
+      <bpmn:incoming>SequenceFlow_ManualReviewSet</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_6</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <!-- Process Manual Decision Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_ManualDecision" name="Manual Decision">
+      <bpmn:incoming>SequenceFlow_6</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_ManualApprove</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_ManualReject</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- Manual Approve Task -->
+    <bpmn:serviceTask id="manual-approve" name="Manual Approve Account" 
+                      camunda:delegateExpression="${manualApproveDelegate}">
+      <bpmn:incoming>SequenceFlow_ManualApprove</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Manual Reject Task -->
+    <bpmn:serviceTask id="manual-reject" name="Manual Reject Account" 
+                      camunda:delegateExpression="${manualRejectDelegate}">
+      <bpmn:incoming>SequenceFlow_ManualReject</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Merge Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_Merge" name="Merge Results">
+      <bpmn:incoming>SequenceFlow_4</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_5</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_7</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_8</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- Send Notification Task -->
+    <bpmn:serviceTask id="send-notification" name="Send Notification" 
+                      camunda:delegateExpression="${sendNotificationDelegate}">
+      <bpmn:incoming>SequenceFlow_9</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_10</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- End Event -->
+    <bpmn:endEvent id="EndEvent_1" name="Process Complete">
+      <bpmn:incoming>SequenceFlow_10</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="validate-request" />
+    <bpmn:sequenceFlow id="SequenceFlow_2" sourceRef="validate-request" targetRef="apply-rules" />
+    <bpmn:sequenceFlow id="SequenceFlow_3" sourceRef="apply-rules" targetRef="Gateway_Decision" />
+    
+    <bpmn:sequenceFlow id="SequenceFlow_AutoApprove" sourceRef="Gateway_Decision" targetRef="auto-approve">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decision == 'AUTO_APPROVE'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="SequenceFlow_AutoReject" sourceRef="Gateway_Decision" targetRef="auto-reject">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decision == 'AUTO_REJECT'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="SequenceFlow_ManualReview" sourceRef="Gateway_Decision" targetRef="set-manual-review">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decision == 'MANUAL_REVIEW'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="SequenceFlow_ManualReviewSet" sourceRef="set-manual-review" targetRef="manual-review" />
+    
+    <bpmn:sequenceFlow id="SequenceFlow_4" sourceRef="auto-approve" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="SequenceFlow_5" sourceRef="auto-reject" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="SequenceFlow_6" sourceRef="manual-review" targetRef="Gateway_ManualDecision" />
+    
+    <bpmn:sequenceFlow id="SequenceFlow_ManualApprove" sourceRef="Gateway_ManualDecision" targetRef="manual-approve">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${manualDecision == 'APPROVE'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="SequenceFlow_ManualReject" sourceRef="Gateway_ManualDecision" targetRef="manual-reject">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${manualDecision == 'REJECT'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="SequenceFlow_7" sourceRef="manual-approve" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="SequenceFlow_8" sourceRef="manual-reject" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="SequenceFlow_9" sourceRef="Gateway_Merge" targetRef="send-notification" />
+    <bpmn:sequenceFlow id="SequenceFlow_10" sourceRef="send-notification" targetRef="EndEvent_1" />
+    
+  </bpmn:process>
+  
+</bpmn:definitions>
